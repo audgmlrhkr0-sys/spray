@@ -23,12 +23,16 @@
   }
 
   function getCanvasPoint(e) {
+    return getCanvasPointFromClient(e.clientX, e.clientY);
+  }
+
+  function getCanvasPointFromClient(clientX, clientY) {
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
     return {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY
     };
   }
 
@@ -298,6 +302,44 @@
     isDrawing = false;
   }
 
+  function onTouchStart(e) {
+    if (!document.getElementById('sprayToggle').checked) return;
+    e.preventDefault();
+    const t = e.touches[0];
+    if (!t) return;
+    isDrawing = true;
+    const { x, y } = getCanvasPointFromClient(t.clientX, t.clientY);
+    currentPath = [{ x, y }];
+  }
+
+  function onTouchMove(e) {
+    if (!isDrawing || currentPath.length === 0) return;
+    e.preventDefault();
+    const t = e.touches[0];
+    if (!t) return;
+    const { x, y } = getCanvasPointFromClient(t.clientX, t.clientY);
+    const last = currentPath[currentPath.length - 1];
+    if (Math.hypot(x - last.x, y - last.y) > 1) {
+      currentPath.push({ x, y });
+    }
+  }
+
+  function onTouchEnd(e) {
+    if (e.touches.length > 0) return;
+    e.preventDefault();
+    if (isDrawing && currentPath.length > 0) {
+      finishStroke();
+    }
+    isDrawing = false;
+  }
+
+  function onTouchCancel(e) {
+    if (isDrawing && currentPath.length > 0) {
+      finishStroke();
+    }
+    isDrawing = false;
+  }
+
   function reset() {
     strokes.length = 0;
     wallDrips.length = 0;
@@ -320,6 +362,11 @@
   canvas.addEventListener('mousemove', onMouseMove);
   canvas.addEventListener('mouseup', onMouseUp);
   canvas.addEventListener('mouseleave', onMouseLeave);
+
+  canvas.addEventListener('touchstart', onTouchStart, { passive: false });
+  canvas.addEventListener('touchmove', onTouchMove, { passive: false });
+  canvas.addEventListener('touchend', onTouchEnd, { passive: false });
+  canvas.addEventListener('touchcancel', onTouchCancel, { passive: false });
 
   window.addEventListener('resize', resize);
   resize();
