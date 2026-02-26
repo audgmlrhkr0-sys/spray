@@ -1,0 +1,106 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #1a1a2e;
+  color: #eee;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  height: 100vh;
+}
+
+.panel {
+  width: 240px;
+  padding: 1rem;
+  background: #16213e;
+  border-right: 1px solid #0f3460;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.panel h2 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #e94560;
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.panel h2:first-child {
+  margin-top: 0;
+}
+
+.panel label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+}
+
+.panel label:has(input[type="checkbox"]) {
+  flex-direction: row;
+  align-items: center;
+}
+
+.panel input[type="color"] {
+  width: 100%;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: #0f3460;
+}
+
+.panel input[type="text"] {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #0f3460;
+  border-radius: 6px;
+  background: #0f3460;
+  color: #eee;
+  font-size: 0.9rem;
+}
+
+.panel input[type="range"] {
+  accent-color: #e94560;
+}
+
+#resetBtn {
+  margin-top: auto;
+  padding: 0.6rem 1rem;
+  background: #e94560;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+#resetBtn:hover {
+  background: #ff6b6b;
+}
+
+.canvas-wrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+#canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  background: #1a1a2e;
+}

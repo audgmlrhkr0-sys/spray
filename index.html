@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>스프레이 & 글자 캔버스</title>
+  <link rel="stylesheet" href="stlye.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="panel">
+      <h2>스프레이</h2>
+      <label>
+        <input type="checkbox" id="sprayToggle" checked />
+        <span>스프레이 ON/OFF</span>
+      </label>
+      <label>
+        색상
+        <input type="color" id="sprayColor" value="#e74c3c" />
+      </label>
+      <label>
+        밀도 <span id="densityVal">8</span>
+        <input type="range" id="sprayDensity" min="1" max="20" value="8" />
+      </label>
+      <label>
+        반지름 <span id="radiusVal">4</span>
+        <input type="range" id="sprayRadius" min="1" max="15" value="4" />
+      </label>
+
+      <h2>글자</h2>
+      <label>
+        텍스트
+        <input type="text" id="textInput" value="oh" placeholder="oh" maxlength="20" />
+      </label>
+      <label>
+        글자 크기 <span id="textSizeVal">28</span>
+        <input type="range" id="textSize" min="12" max="48" value="28" />
+      </label>
+      <label>
+        글자 색상
+        <input type="color" id="textColor" value="#3498db" />
+      </label>
+
+      <h2>흘러내림</h2>
+      <label>
+        흐림
+        <input type="checkbox" id="blurEffect" />
+      </label>
+
+      <button type="button" id="resetBtn">캔버스 리셋</button>
+    </aside>
+
+    <main class="canvas-wrap">
+      <canvas id="canvas"></canvas>
+    </main>
+  </div>
+  <script src="main.js"></script>
+</body>
+</html>
