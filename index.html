@@ -8,7 +8,9 @@
 </head>
 <body>
   <div class="app">
-    <aside class="panel">
+    <aside class="panel" id="panel">
+      <button type="button" class="panel-toggle" id="panelToggle" aria-label="설정 접기"></button>
+      <div class="panel-content">
       <h2>스프레이</h2>
       <label>
         <input type="checkbox" id="sprayToggle" checked />
@@ -48,6 +50,7 @@
       </label>
 
       <button type="button" id="resetBtn">캔버스 리셋</button>
+      </div>
     </aside>
 
     <main class="canvas-wrap">
