@@ -428,17 +428,23 @@
 
   var panelEl = document.getElementById('panel');
   var panelToggle = document.getElementById('panelToggle');
+  var panelToggleText = panelToggle && panelToggle.querySelector('.panel-toggle-text');
+  function updatePanelToggleLabel() {
+    var collapsed = panelEl.classList.contains('collapsed');
+    panelToggle.setAttribute('aria-label', collapsed ? '설정 펼치기' : '설정 접기');
+    if (panelToggleText) panelToggleText.textContent = collapsed ? '설정' : '접기';
+  }
   function togglePanel() {
     panelEl.classList.toggle('collapsed');
-    panelToggle.setAttribute('aria-label', panelEl.classList.contains('collapsed') ? '설정 펼치기' : '설정 접기');
+    updatePanelToggleLabel();
     setTimeout(resize, 260);
   }
   panelToggle.addEventListener('click', togglePanel);
 
   if (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) {
     panelEl.classList.add('collapsed');
-    panelToggle.setAttribute('aria-label', '설정 펼치기');
   }
+  updatePanelToggleLabel();
 
   canvas.addEventListener('pointerdown', onPointerDown, { capture: true });
   canvas.addEventListener('pointermove', onPointerMove, { capture: true });

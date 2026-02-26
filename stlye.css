@@ -56,43 +56,54 @@ body {
   left: 0;
   top: 50%;
   transform: translateY(-50%);
-  width: 28px;
-  height: 56px;
-  padding: 0;
+  min-width: 36px;
+  height: 64px;
+  padding: 0 10px 0 8px;
   background: #0f3460;
   color: #eee;
   border: 1px solid #e94560;
   border-left: none;
-  border-radius: 0 8px 8px 0;
-  font-size: 0.75rem;
+  border-radius: 0 10px 10px 0;
+  font-size: 0.8rem;
+  font-weight: 600;
   cursor: pointer;
   z-index: 10;
   flex-shrink: 0;
-  transition: background 0.2s;
+  transition: background 0.2s, color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  box-shadow: 2px 0 8px rgba(0,0,0,0.2);
 }
 
 .panel-toggle:hover {
   background: #1a4a7a;
+  color: #fff;
+}
+
+.panel-toggle:active {
+  background: #e94560;
+}
+
+.panel-toggle-arrow {
+  font-size: 0.7rem;
+  opacity: 0.9;
 }
 
 .panel.collapsed .panel-toggle {
   left: 0;
   border-left: 1px solid #e94560;
-  border-radius: 0 8px 8px 0;
+  border-radius: 0 10px 10px 0;
+  padding: 0 8px;
 }
 
-.panel-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.panel .panel-toggle::after {
-  content: '◀';
-}
-
-.panel.collapsed .panel-toggle::after {
+.panel.collapsed .panel-toggle-arrow::before {
   content: '▶';
+}
+
+.panel:not(.collapsed) .panel-toggle-arrow::before {
+  content: '◀';
 }
 
 .panel h2 {
