@@ -19,6 +19,21 @@
   // 벽에 맺혀서 주르륵 흐르는 줄 (시작점 고정, 아래로만 길어짐)
   const wallDrips = [];
 
+  let cameraPath = [];
+  let cameraFingerVisible = false;
+  let cameraVideo = null;
+  let cameraPreviewEl = null;
+  let handsInstance = null;
+  let cameraStream = null;
+  let cameraDetectionRunning = false;
+  let cameraDetectionInterval = null;
+  let cameraFingerTargetX = 0;
+  let cameraFingerTargetY = 0;
+  let cameraFingerSmoothedX = 0;
+  let cameraFingerSmoothedY = 0;
+  let cameraFingerSmoothFactor = 0.28;
+  const CAMERA_DETECT_INTERVAL_MS = 150;
+
   function saveToStorage() {
     if (width < 10 || height < 10) return;
     const savedWidth = width;
@@ -254,6 +269,34 @@
     saveToStorage();
   }
 
+  function finishStrokeWithPath(path) {
+    if (!path || path.length < 1) return;
+    var sprayColor = document.getElementById('sprayColor').value;
+    var radiusVal = parseInt(document.getElementById('sprayRadius').value, 10) || 4;
+    var thickness = 24 + radiusVal * 2;
+    var text = (document.getElementById('textInput').value || 'oh').trim();
+    var textSize = Math.max(12, parseInt(document.getElementById('textSize').value, 10) || 28);
+    var textColor = document.getElementById('textColor').value;
+    var totalLen = pathLength(path);
+    var charSpacing = Math.max(8, textSize * 0.6);
+    var numChars = Math.max(1, Math.floor(totalLen / charSpacing));
+    var pathNorm = path.map(function (p) { return { x: p.x / width, y: p.y / height }; });
+    strokes.push({
+      path: path.slice(),
+      pathNorm: pathNorm,
+      sprayColor: sprayColor,
+      thickness: thickness,
+      text: text,
+      textSize: textSize,
+      textColor: textColor,
+      numChars: numChars,
+      totalLen: totalLen
+    });
+    var dripCount = 3 + Math.floor(totalLen / 50);
+    createDripsFromPath(path, sprayColor, Math.min(dripCount, 12));
+    saveToStorage();
+  }
+
   function drawStroke(s) {
     const path = s.pathNorm
       ? s.pathNorm.map(p => ({ x: p.x * width, y: p.y * height }))
@@ -298,6 +341,14 @@
 
   function update() {
     wallDrips.forEach(d => d.update());
+    if (cameraDetectionRunning && cameraFingerVisible && document.getElementById('sprayToggle').checked) {
+      cameraFingerSmoothedX += (cameraFingerTargetX - cameraFingerSmoothedX) * cameraFingerSmoothFactor;
+      cameraFingerSmoothedY += (cameraFingerTargetY - cameraFingerSmoothedY) * cameraFingerSmoothFactor;
+      var last = cameraPath[cameraPath.length - 1];
+      if (!last || Math.hypot(cameraFingerSmoothedX - last.x, cameraFingerSmoothedY - last.y) > 1.5) {
+        cameraPath.push({ x: cameraFingerSmoothedX, y: cameraFingerSmoothedY });
+      }
+    }
   }
 
   function draw() {
@@ -353,6 +404,47 @@
           const d = (numChars > 1 ? (i / (numChars - 1)) : 0) * totalLen;
           const p = pointAtDistance(currentPath, d);
           if (p) ctx.fillText(text[i % text.length], p.x, p.y);
+        }
+      }
+      ctx.restore();
+    }
+    if (cameraPath.length >= 1) {
+      ctx.save();
+      var col = document.getElementById('sprayColor').value;
+      var thick = 24 + (parseInt(document.getElementById('sprayRadius').value, 10) || 4) * 2;
+      ctx.strokeStyle = col;
+      ctx.fillStyle = col;
+      ctx.lineWidth = thick;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.globalAlpha = 0.9;
+      if (cameraPath.length === 1) {
+        ctx.beginPath();
+        ctx.arc(cameraPath[0].x, cameraPath[0].y, thick / 2, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(cameraPath[0].x, cameraPath[0].y);
+        for (var i = 1; i < cameraPath.length; i++) {
+          ctx.lineTo(cameraPath[i].x, cameraPath[i].y);
+        }
+        ctx.stroke();
+      }
+      var text = (document.getElementById('textInput').value || 'oh').trim();
+      if (text) {
+        var textSize = Math.max(12, parseInt(document.getElementById('textSize').value, 10) || 28);
+        var textColor = document.getElementById('textColor').value;
+        var totalLen = pathLength(cameraPath);
+        var numChars = Math.max(1, Math.floor(totalLen / Math.max(8, textSize * 0.6)));
+        ctx.fillStyle = textColor;
+        ctx.font = 'bold ' + textSize + 'px "Segoe UI", sans-serif';
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'center';
+        ctx.globalAlpha = 1;
+        for (var j = 0; j < numChars; j++) {
+          var d = (numChars > 1 ? (j / (numChars - 1)) : 0) * totalLen;
+          var p = pointAtDistance(cameraPath, d);
+          if (p) ctx.fillText(text[j % text.length], p.x, p.y);
         }
       }
       ctx.restore();
@@ -462,6 +554,118 @@
     if (document.visibilityState === 'hidden') saveToStorage();
   });
   setInterval(saveToStorage, 1500);
+
+  cameraVideo = document.getElementById('cameraVideo');
+  cameraPreviewEl = document.getElementById('cameraPreview');
+
+  function onHandResults(results) {
+    if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+      if (cameraFingerVisible && cameraPath.length > 0) {
+        finishStrokeWithPath(cameraPath);
+        cameraPath = [];
+      }
+      cameraFingerVisible = false;
+      return;
+    }
+    var landmarks = results.multiHandLandmarks[0];
+    var tip = landmarks[8];
+    if (!tip) return;
+    var normX = tip.x;
+    var normY = tip.y;
+    cameraFingerTargetX = (1 - normX) * width;
+    cameraFingerTargetY = normY * height;
+    cameraFingerVisible = true;
+    if (cameraPath.length === 0) {
+      cameraFingerSmoothedX = cameraFingerTargetX;
+      cameraFingerSmoothedY = cameraFingerTargetY;
+    }
+  }
+
+  function startCameraSpray() {
+    if (!cameraVideo) return;
+    cameraPath = [];
+    cameraFingerVisible = false;
+    var startDetection = function () {
+      if (!window.mediaPipeHandLandmarker) {
+        if (window.mediaPipeHandError) {
+          alert('손 인식 로딩에 실패했습니다. 네트워크를 확인해 주세요.');
+          return;
+        }
+        setTimeout(startDetection, 100);
+        return;
+      }
+      handsInstance = window.mediaPipeHandLandmarker;
+      cameraDetectionRunning = true;
+      if (cameraDetectionInterval) clearInterval(cameraDetectionInterval);
+      cameraDetectionInterval = setInterval(runCameraDetectionLoop, CAMERA_DETECT_INTERVAL_MS);
+    };
+    if (cameraStream) {
+      cameraPreviewEl.classList.add('active');
+      startDetection();
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
+      .then(function (stream) {
+        cameraStream = stream;
+        cameraVideo.srcObject = stream;
+        cameraVideo.onloadedmetadata = function () {
+          cameraVideo.play();
+          cameraPreviewEl.classList.add('active');
+          startDetection();
+        };
+      })
+      .catch(function (err) {
+        console.warn('Camera error:', err);
+        alert('카메라를 사용할 수 없습니다. 권한을 확인해 주세요.');
+      });
+  }
+
+  function runCameraDetectionLoop() {
+    if (!cameraDetectionRunning || !handsInstance || !cameraVideo) return;
+    if (cameraVideo.readyState < 2) return;
+    if (document.visibilityState === 'hidden') return;
+    try {
+      var timestamp = performance.now();
+      var results = handsInstance.detectForVideo(cameraVideo, timestamp);
+      if (results && results.landmarks && results.landmarks.length > 0) {
+        onHandResults({ multiHandLandmarks: results.landmarks });
+      } else {
+        onHandResults({ multiHandLandmarks: [] });
+      }
+    } catch (e) {
+      onHandResults({ multiHandLandmarks: [] });
+    }
+  }
+
+  function stopCameraSpray() {
+    cameraDetectionRunning = false;
+    if (cameraDetectionInterval) {
+      clearInterval(cameraDetectionInterval);
+      cameraDetectionInterval = null;
+    }
+    if (cameraFingerVisible && cameraPath.length > 0) {
+      finishStrokeWithPath(cameraPath);
+    }
+    cameraPath = [];
+    cameraFingerVisible = false;
+    if (cameraPreviewEl) cameraPreviewEl.classList.remove('active');
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(function (t) { t.stop(); });
+      cameraStream = null;
+    }
+    if (cameraVideo) cameraVideo.srcObject = null;
+  }
+
+  var cameraCheck = document.getElementById('cameraSprayTogglePanel');
+  if (cameraCheck) {
+    cameraCheck.addEventListener('change', function () {
+      if (this.checked) {
+        startCameraSpray();
+      } else {
+        stopCameraSpray();
+      }
+    });
+  }
 
   resize();
   loadFromStorage();

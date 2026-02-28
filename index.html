@@ -43,6 +43,12 @@
         <input type="color" id="textColor" value="#3498db" />
       </label>
 
+      <h2>카메라</h2>
+      <label class="panel-camera-label">
+        <input type="checkbox" id="cameraSprayTogglePanel" />
+        <span>카메라 스프레이 (검지)</span>
+      </label>
+
       <h2>흘러내림</h2>
       <label>
         흐림
@@ -55,8 +61,38 @@
 
     <main class="canvas-wrap">
       <canvas id="canvas"></canvas>
+      <div class="camera-preview" id="cameraPreview">
+        <video id="cameraVideo" playsinline muted></video>
+        <span class="camera-label">카메라</span>
+      </div>
     </main>
   </div>
+  <script type="module">
+    (async function () {
+      var VERSION = '0.10.32';
+      var BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@' + VERSION;
+      try {
+        var mp = await import(BASE + '/vision_bundle.mjs');
+        var HandLandmarker = mp.HandLandmarker || (mp.default && mp.default.HandLandmarker);
+        var FilesetResolver = mp.FilesetResolver || (mp.default && mp.default.FilesetResolver);
+        if (!HandLandmarker || !FilesetResolver) {
+          throw new Error('HandLandmarker or FilesetResolver not found. Keys: ' + Object.keys(mp).join(','));
+        }
+        var vision = await FilesetResolver.forVisionTasks(BASE + '/wasm');
+        window.mediaPipeHandLandmarker = await HandLandmarker.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task'
+          },
+          numHands: 1,
+          runningMode: 'VIDEO'
+        });
+      } catch (e) {
+        console.error('MediaPipe load error:', e);
+        window.mediaPipeHandError = e;
+      }
+      window.dispatchEvent(new Event('mediapipe-ready'));
+    })();
+  </script>
   <script src="main.js"></script>
 </body>
 </html>
